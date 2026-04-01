@@ -98,7 +98,7 @@ export default function RootLayout() {
       router.replace('/(auth)/login');
     } else if (session && !hasOnboarded && !inOnboarding && !inTabs && !inAdmin && !inFocusComplete) {
       router.replace('/onboarding');
-    } else if (session && hasOnboarded && (inAuth || inOnboarding)) {
+    } else if (session && hasOnboarded && inAuth) {
       router.replace('/(tabs)');
     }
   }, [initialized, fontsLoaded, session, hasOnboarded, segments]);
