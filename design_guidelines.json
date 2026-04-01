@@ -1,0 +1,203 @@
+{
+  "project_name": "Noshift",
+  "theme_archetype": "Archetype 5 (Jewel & Luxury) adapted for Minimalist Dark Journal",
+  "design_philosophy": "Premium, calm, and highly focused. The app acts as an anti-idea-jumping sanctuary. Friction is intentionally introduced to prevent goal-switching. We avoid gamified, hyper-stimulating interfaces in favor of a reflective, high-quality journal aesthetic.",
+  "colors": {
+    "background": {
+      "base": "#0F0F0F",
+      "surface": "#1A1A1A",
+      "surface_elevated": "#242424",
+      "overlay": "rgba(15, 15, 15, 0.85)"
+    },
+    "brand": {
+      "primary": "#BA7517",
+      "primary_muted": "rgba(186, 117, 23, 0.15)",
+      "admin_accent": "#185FA5"
+    },
+    "text": {
+      "primary": "rgba(255, 255, 255, 0.92)",
+      "secondary": "rgba(255, 255, 255, 0.60)",
+      "tertiary": "rgba(255, 255, 255, 0.38)",
+      "inverse": "#000000"
+    },
+    "border": {
+      "subtle": "rgba(255, 255, 255, 0.08)",
+      "active": "rgba(186, 117, 23, 0.30)"
+    },
+    "status": {
+      "success": "#2E7D32",
+      "danger": "#D32F2F"
+    }
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Playfair Display",
+      "body": "Manrope"
+    },
+    "styles": {
+      "h1": {
+        "fontFamily": "Playfair Display",
+        "fontSize": 40,
+        "lineHeight": 48,
+        "fontWeight": "700",
+        "letterSpacing": -0.5
+      },
+      "h2": {
+        "fontFamily": "Playfair Display",
+        "fontSize": 32,
+        "lineHeight": 40,
+        "fontWeight": "600",
+        "letterSpacing": -0.5
+      },
+      "h3": {
+        "fontFamily": "Playfair Display",
+        "fontSize": 24,
+        "lineHeight": 32,
+        "fontWeight": "600"
+      },
+      "streak_number": {
+        "fontFamily": "Playfair Display",
+        "fontSize": 64,
+        "lineHeight": 72,
+        "fontWeight": "700",
+        "color": "#BA7517"
+      },
+      "body_large": {
+        "fontFamily": "Manrope",
+        "fontSize": 18,
+        "lineHeight": 28,
+        "fontWeight": "400"
+      },
+      "body_main": {
+        "fontFamily": "Manrope",
+        "fontSize": 16,
+        "lineHeight": 24,
+        "fontWeight": "400"
+      },
+      "label": {
+        "fontFamily": "Manrope",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "fontWeight": "600",
+        "letterSpacing": 1.2,
+        "textTransform": "uppercase"
+      }
+    }
+  },
+  "spacing_and_layout": {
+    "grid": {
+      "screen_padding": 24,
+      "element_gap": 16,
+      "section_gap": 40
+    },
+    "border_radius": {
+      "small": 8,
+      "medium": 16,
+      "large": 24,
+      "pill": 999
+    }
+  },
+  "components_guidelines": {
+    "button_primary": {
+      "backgroundColor": "#BA7517",
+      "borderRadius": 999,
+      "paddingVertical": 16,
+      "paddingHorizontal": 32,
+      "alignItems": "center",
+      "justifyContent": "center",
+      "flexDirection": "row",
+      "textStyle": {
+        "color": "#000000",
+        "fontFamily": "Manrope",
+        "fontWeight": "700",
+        "fontSize": 16
+      }
+    },
+    "button_secondary": {
+      "backgroundColor": "transparent",
+      "borderRadius": 999,
+      "borderWidth": 1,
+      "borderColor": "rgba(255, 255, 255, 0.2)",
+      "paddingVertical": 16,
+      "paddingHorizontal": 32,
+      "alignItems": "center",
+      "justifyContent": "center",
+      "textStyle": {
+        "color": "rgba(255, 255, 255, 0.92)",
+        "fontFamily": "Manrope",
+        "fontWeight": "600",
+        "fontSize": 16
+      }
+    },
+    "card": {
+      "backgroundColor": "#1A1A1A",
+      "borderRadius": 24,
+      "padding": 24,
+      "borderWidth": 1,
+      "borderColor": "rgba(255, 255, 255, 0.05)",
+      "shadowColor": "#000",
+      "shadowOffset": { "width": 0, "height": 8 },
+      "shadowOpacity": 0.4,
+      "shadowRadius": 24,
+      "elevation": 5
+    },
+    "input_field": {
+      "backgroundColor": "#1A1A1A",
+      "borderRadius": 16,
+      "padding": 16,
+      "color": "rgba(255, 255, 255, 0.92)",
+      "fontFamily": "Manrope",
+      "fontSize": 16,
+      "borderWidth": 1,
+      "borderColor": "rgba(255, 255, 255, 0.08)"
+    },
+    "bottom_tab_bar": {
+      "backgroundColor": "#1A1A1A",
+      "borderTopWidth": 1,
+      "borderTopColor": "rgba(255, 255, 255, 0.05)",
+      "paddingTop": 12,
+      "paddingBottom": 24
+    }
+  },
+  "screen_specific_rules": {
+    "onboarding": {
+      "description": "6-step wizard. Keep it highly focused. One question per screen. Generous vertical spacing. Fade-in animations between steps."
+    },
+    "home_active_focus": {
+      "description": "The active focus card should take up the majority of the screen. Display the streak prominently using the 'streak_number' typography. Use a subtle amber glow behind the card to signify its importance."
+    },
+    "friction_gate": {
+      "description": "When adding a new idea while one is active, present a weighty, full-screen modal (backgroundColor: rgba(15,15,15,0.95)). Use 'Playfair Display' for a serious, reflective warning title. Require a deliberate action (like a long-press or a slide-to-confirm) to abandon the current goal, heavily nudging them to the 'Park Idea' button instead."
+    },
+    "parking_lot": {
+      "description": "A list of parked ideas. Use swipe-to-delete (discard) and swipe-to-promote (make active). Cards here should have lower opacity borders to feel 'waiting' rather than 'active'."
+    },
+    "admin_dashboard": {
+      "description": "Hidden route triggered by long-press and PIN (2847). Uses the blue accent (#185FA5) instead of amber to distinctively separate the context from the user-facing app."
+    }
+  },
+  "image_urls": {
+    "splash_background": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/0163d1e2-8e1a-493c-8d72-d34b5d77e325/images/ee72af66ce95fde786a7c134f62142442fd374b299e313e0369841ffed973bfc.png",
+      "description": "Minimalist premium dark charcoal and amber abstract gradient texture, subtle grain. Use as the splash screen background or behind the onboarding flow."
+    },
+    "focus_icon_3d": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/0163d1e2-8e1a-493c-8d72-d34b5d77e325/images/eca0710efa45983c32b7c70c26b8720af4d7bb69896706738b65d073b5342888.png",
+      "description": "3D glowing amber spark in dark glass sphere. Use on the Home screen or Check-in modal to celebrate focus."
+    },
+    "parking_icon_3d": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/0163d1e2-8e1a-493c-8d72-d34b5d77e325/images/77f5ceca21b53fd6113f9d85c0974bd27bf9fa8b0c55502755eb8f69ccc87d6a.png",
+      "description": "3D vault/meter icon. Use in the Parking Lot empty state or as the header image for the Parking Lot screen."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly use React Native's `StyleSheet.create()` for all styling. DO NOT use Tailwind CSS or NativeWind.",
+    "Ensure `expo-font` is configured to load 'Playfair Display' and 'Manrope'. Use fallback system fonts conditionally while loading.",
+    "Maintain the #0F0F0F deep dark background across all main screens. Avoid pure black to reduce eye strain.",
+    "Implement the UI with a 'premium journal' aesthetic: ample whitespace (padding: 24), subtle 1px borders (rgba(255,255,255,0.05)), and no harsh drop shadows.",
+    "All interactive elements (buttons, inputs, tabs) MUST include a `testID` attribute (React Native equivalent of data-testid) formatted as kebab-case, role-based names (e.g., `testID=\"login-submit-button\"`).",
+    "For the 7-day momentum graph and progress calendar heatmap, use a custom SVG or a charting library, styling it with the amber accent (#BA7517) and dark surface (#1A1A1A).",
+    "The Friction Gate must feel deliberate. Implement a slight delay or a complex gesture (like hold-to-confirm) if the user insists on abandoning their current goal.",
+    "Use standard React Native `Modal` or a bottom sheet library for the Check-in and Friction Gate interactions, styling the overlay with rgba(15, 15, 15, 0.85)."
+  ]
+}
