@@ -94,9 +94,13 @@
 - Reflection input
 - Start Next Focus button
 
-## Supabase Setup Required
-Run `/app/supabase_setup.sql` in Supabase SQL Editor BEFORE first use.
-Also disable email confirmation in Supabase Auth settings.
+### Push Notifications (Added 2026-04-01)
+- `lib/notifications.ts` — permission request, push token management, Android channel setup
+- `_layout.tsx` — auto-registers push token on session start
+- `settings.tsx` — toggle reads/writes `profiles.push_token`, calls `enablePushNotifications()` / `disablePushNotifications()`
+- `app.json` — `expo-notifications` plugin, iOS `NSUserNotificationUsageDescription`, Android `POST_NOTIFICATIONS` permission
+- `supabase/functions/send-checkin-reminders/index.ts` — Deno edge function queries active-focus users without today's check-in, sends via Expo Push API (100-per-chunk), cleans up invalid tokens
+- `supabase/notifications_cron_setup.sql` — pg_cron + pg_net schedule at 0 20 * * * (8 PM UTC)
 
 ## Prioritized Backlog
 
