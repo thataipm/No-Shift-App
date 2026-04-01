@@ -76,10 +76,7 @@ agenthub/agents/youtube/db
 # Build caches
 .cache/
 
-memory/test_credentials.md
-
 # Mobile development
-android-sdk/-e 
-# Environment files
-*.env
-*.env.*
+android-sdk/
+# Environment files - tracked for deployment (Emergent platform needs these)
+# *.env files intentionally NOT ignored
