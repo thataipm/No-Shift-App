@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 
 // Configure how notifications appear when app is in foreground
 export function setupNotificationHandlers() {
+  if (Platform.OS === 'web') return;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldPlaySound: true,
@@ -30,6 +31,8 @@ export async function setupAndroidChannel() {
 
 // Request notification permissions and get push token
 export async function registerForPushNotifications(): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+
   // Only works on physical devices
   if (!Device.isDevice) {
     console.log('Push notifications require a physical device');
@@ -81,6 +84,8 @@ export async function savePushToken(token: string | null): Promise<void> {
 
 // Full registration flow: request permission + save token
 export async function enablePushNotifications(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+
   await setupAndroidChannel();
   const token = await registerForPushNotifications();
 
@@ -111,6 +116,8 @@ export async function disablePushNotifications(): Promise<void> {
 
 // Setup notification tap listener (navigate to home/checkin on tap)
 export function setupNotificationListeners(onTap?: () => void) {
+  if (Platform.OS === 'web') return () => {};
+
   const tapSub = Notifications.addNotificationResponseReceivedListener(() => {
     onTap?.();
   });
