@@ -80,3 +80,7 @@ agenthub/agents/youtube/db
 android-sdk/
 # Environment files - tracked for deployment (Emergent platform needs these)
 # *.env files intentionally NOT ignored
+-e 
+# Environment files
+*.env
+*.env.*
