@@ -7,6 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { supabase, Profile } from '../../lib/supabase';
+import {
+  enablePushNotifications,
+  disablePushNotifications,
+} from '../../lib/notifications';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 
 const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
@@ -17,6 +21,7 @@ export default function SettingsScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [togglingNotif, setTogglingNotif] = useState(false);
 
   // Admin PIN flow
   const [longPressCount, setLongPressCount] = useState(0);
@@ -30,7 +35,21 @@ export default function SettingsScreen() {
     if (!user) return;
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
+    // Derive notification state from push_token
+    setNotificationsEnabled(!!(data?.push_token));
   }, []);
+
+  const handleNotificationToggle = async (value: boolean) => {
+    setTogglingNotif(true);
+    if (value) {
+      const success = await enablePushNotifications();
+      setNotificationsEnabled(success);
+    } else {
+      await disablePushNotifications();
+      setNotificationsEnabled(false);
+    }
+    setTogglingNotif(false);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -94,7 +113,8 @@ export default function SettingsScreen() {
             <Switch
               testID="notification-toggle"
               value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              onValueChange={handleNotificationToggle}
+              disabled={togglingNotif}
               trackColor={{ false: COLORS.surfaceElevated, true: COLORS.primaryMuted }}
               thumbColor={notificationsEnabled ? COLORS.primary : COLORS.textTertiary}
             />
@@ -102,10 +122,14 @@ export default function SettingsScreen() {
           {notificationsEnabled && (
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Reminder Time</Text>
-              <Text style={styles.rowValue}>8:00 PM</Text>
+              <Text style={styles.rowValue}>8:00 PM UTC</Text>
             </View>
           )}
-          <Text style={styles.sectionHint}>Push notifications will be available in the next update.</Text>
+          <Text style={styles.sectionHint}>
+            {notificationsEnabled
+              ? 'You\'ll get a daily reminder at 8 PM UTC if you haven\'t checked in.'
+              : 'Enable to get a daily check-in reminder.'}
+          </Text>
         </View>
 
         {/* Danger zone */}

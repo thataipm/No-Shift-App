@@ -16,6 +16,13 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { supabase } from '../lib/supabase';
 import { COLORS } from '../constants/theme';
+import {
+  setupNotificationHandlers,
+  setupAndroidChannel,
+  registerForPushNotifications,
+  savePushToken,
+  setupNotificationListeners,
+} from '../lib/notifications';
 import type { Session } from '@supabase/supabase-js';
 
 SplashScreen.preventAutoHideAsync();
@@ -45,12 +52,21 @@ export default function RootLayout() {
     return !!(data && data.length > 0);
   }, []);
 
+  // Initialize push notifications when session exists
+  const initNotifications = useCallback(async () => {
+    setupNotificationHandlers();
+    await setupAndroidChannel();
+    const token = await registerForPushNotifications();
+    if (token) await savePushToken(token);
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
         const onboarded = await checkOnboarding(session.user.id);
         setHasOnboarded(onboarded);
+        initNotifications();
       }
       setInitialized(true);
     });
@@ -61,13 +77,14 @@ export default function RootLayout() {
         if (session) {
           const onboarded = await checkOnboarding(session.user.id);
           setHasOnboarded(onboarded);
+          initNotifications();
         } else {
           setHasOnboarded(false);
         }
       }
     );
     return () => subscription.unsubscribe();
-  }, [checkOnboarding]);
+  }, [checkOnboarding, initNotifications]);
 
   useEffect(() => {
     if (!initialized || !fontsLoaded) return;
