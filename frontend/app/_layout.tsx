@@ -74,10 +74,12 @@ export default function RootLayout() {
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
     const inTabs = segments[0] === '(tabs)';
+    const inAdmin = segments[0] === 'admin';
+    const inFocusComplete = segments[0] === 'focus-complete';
 
     if (!session && !inAuth) {
       router.replace('/(auth)/login');
-    } else if (session && !hasOnboarded && !inOnboarding) {
+    } else if (session && !hasOnboarded && !inOnboarding && !inTabs && !inAdmin && !inFocusComplete) {
       router.replace('/onboarding');
     } else if (session && hasOnboarded && (inAuth || inOnboarding)) {
       router.replace('/(tabs)');
