@@ -8,7 +8,7 @@ import os
 
 BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://idea-parking.preview.emergentagent.com'
+    raise ValueError('EXPO_PUBLIC_BACKEND_URL environment variable is required')
 
 
 class TestHealth:
