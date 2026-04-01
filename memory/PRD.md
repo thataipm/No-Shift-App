@@ -94,13 +94,15 @@
 - Reflection input
 - Start Next Focus button
 
-### Push Notifications (Added 2026-04-01)
+### Push Notifications (Added & Deployed 2026-04-01)
 - `lib/notifications.ts` — permission request, push token management, Android channel setup
 - `_layout.tsx` — auto-registers push token on session start
 - `settings.tsx` — toggle reads/writes `profiles.push_token`, calls `enablePushNotifications()` / `disablePushNotifications()`
 - `app.json` — `expo-notifications` plugin, iOS `NSUserNotificationUsageDescription`, Android `POST_NOTIFICATIONS` permission
-- `supabase/functions/send-checkin-reminders/index.ts` — Deno edge function queries active-focus users without today's check-in, sends via Expo Push API (100-per-chunk), cleans up invalid tokens
-- `supabase/notifications_cron_setup.sql` — pg_cron + pg_net schedule at 0 20 * * * (8 PM UTC)
+- `supabase/functions/send-checkin-reminders/index.ts` — **DEPLOYED** Deno edge function queries active-focus users without today's check-in, sends via Expo Push API (100-per-chunk), cleans up invalid tokens
+- **pg_cron schedule active**: `0 20 * * *` (8 PM UTC daily) via cron job ID 1 in the database
+- Edge function URL: `https://duuuhydcmzhyqdsccrkh.supabase.co/functions/v1/send-checkin-reminders`
+- Edge function test response: `{"sent": 0, "message": "No users with push tokens"}` ✅
 
 ## Prioritized Backlog
 
