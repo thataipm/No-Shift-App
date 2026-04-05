@@ -2,11 +2,19 @@ export const COLORS = {
   bg: '#0F0F0F',
   surface: '#1A1A1A',
   surfaceElevated: '#242424',
+  surfaceHighest: '#2E2E2E',
+  surfaceContainer: '#1F1F1F',
   overlay: 'rgba(15, 15, 15, 0.92)',
 
   primary: '#BA7517',
   primaryMuted: 'rgba(186, 117, 23, 0.15)',
+  primaryDim: 'rgba(186, 117, 23, 0.55)',
+  onPrimary: '#000000',
   adminAccent: '#185FA5',
+
+  tertiaryContainer: '#FFB8AE',
+  onTertiary: '#3B0000',
+  outlineVariant: 'rgba(255, 255, 255, 0.12)',
 
   textPrimary: 'rgba(255, 255, 255, 0.92)',
   textSecondary: 'rgba(255, 255, 255, 0.60)',

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 
@@ -15,6 +16,7 @@ export default function SignupScreen() {
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSignup = async () => {
     if (!email.trim() || !password.trim() || !confirm.trim()) {
@@ -31,11 +33,38 @@ export default function SignupScreen() {
     }
     setLoading(true);
     setError('');
-    const { error } = await supabase.auth.signUp({ email, password });
+    const redirectTo = Linking.createURL('auth-callback');
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectTo },
+    });
     setLoading(false);
-    if (error) setError(error.message);
-    // On success, auth state change in _layout.tsx will route to onboarding
+    if (error) { setError(error.message); return; }
+    setEmailSent(true);
   };
+
+  if (emailSent) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.confirmContainer}>
+          <Text style={styles.logo}>Noshift</Text>
+          <Text style={styles.confirmIcon}>✦</Text>
+          <Text style={styles.confirmHeading}>Check your email</Text>
+          <Text style={styles.confirmBody}>
+            {`We sent a confirmation link to ${email}.\nTap the link in that email, then come back here to sign in.`}
+          </Text>
+          <TouchableOpacity
+            testID="signup-back-to-login"
+            style={styles.primaryBtn}
+            onPress={() => router.replace('/(auth)/login')}
+          >
+            <Text style={styles.primaryBtnText}>Back to Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -150,4 +179,15 @@ const styles = StyleSheet.create({
   primaryBtnText: { fontFamily: FONTS.bold, fontSize: 16, color: '#000' },
   secondaryBtn: { alignItems: 'center', paddingVertical: SPACING.sm },
   secondaryBtnText: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.textSecondary },
+  confirmContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+    gap: SPACING.md,
+  },
+  confirmIcon: { fontSize: 40, color: COLORS.primary },
+  confirmHeading: { fontFamily: FONTS.heading, fontSize: 30, color: COLORS.textPrimary, textAlign: 'center' },
+  confirmBody: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 24 },
 });

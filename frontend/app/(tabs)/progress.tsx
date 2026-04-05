@@ -5,9 +5,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-gifted-charts';
 import { supabase, Checkin, Focus, calculateStreak } from '../../lib/supabase';
-import { COLORS, FONTS, SPACING, RADIUS, CARD_STYLE } from '../../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 
-const WIDTH = Dimensions.get('window').width - SPACING.lg * 2;
+const SCREEN_W = Dimensions.get('window').width;
+// Cell size: screen - content padding - card padding - 6 gaps between 7 cells
+const CELL_SIZE = Math.floor((SCREEN_W - SPACING.lg * 2 - SPACING.lg * 2 - 6 * 4) / 7);
+// 40 = reserved space for Y-axis labels on the left of the LineChart
+const CHART_W = SCREEN_W - SPACING.lg * 2 - SPACING.lg * 2 - 40;
 
 export default function ProgressScreen() {
   const [checkins, setCheckins] = useState<Checkin[]>([]);
@@ -41,21 +45,27 @@ export default function ProgressScreen() {
   const totalFocuses = focuses.filter(f => f.status !== 'active').length;
   const focusCompletionRate = totalFocuses > 0 ? Math.round((completedFocuses / totalFocuses) * 100) : 0;
 
-  // Line chart data
-  const lineData = checkins.filter(c => c.did_work && c.momentum).map(c => ({
+  // Line chart data — last 30 worked days
+  const lineData = checkins.filter(c => c.did_work && c.momentum).slice(-30).map(c => ({
     value: c.momentum!,
     dataPointColor: COLORS.primary,
     label: '',
   }));
 
-  // Calendar heatmap — last 49 days (7 weeks)
-  const heatmapDays = Array.from({ length: 49 }).map((_, i) => {
+  // Heatmap — 49 days, padded to start on correct day of week
+  const rawDays = Array.from({ length: 49 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (48 - i));
     const dateStr = d.toISOString().split('T')[0];
     const ci = checkins.find(c => c.date === dateStr);
     return { dateStr, ci, day: d.getDay() };
   });
+  // Pad with empty cells so first cell aligns to correct day column
+  const leadingEmpty = rawDays[0].day;
+  const heatmapCells = [
+    ...Array.from({ length: leadingEmpty }, () => ({ empty: true })),
+    ...rawDays.map(d => ({ empty: false, ...d })),
+  ];
 
   if (loading) {
     return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator color={COLORS.primary} /></View></SafeAreaView>;
@@ -69,28 +79,30 @@ export default function ProgressScreen() {
       >
         <Text style={styles.screenTitle}>Progress</Text>
 
-        {/* Streak & Stats */}
-        <View style={styles.statsGrid}>
-          <View style={[styles.statCard, styles.statCardLarge]} testID="streak-display">
-            <Text style={styles.bigStat}>{streak}</Text>
-            <Text style={styles.statLabel}>DAY STREAK</Text>
+        {/* Streak — standalone hero, no card */}
+        <View style={styles.streakHero} testID="streak-display">
+          <Text style={styles.streakLabel}>CURRENT STREAK</Text>
+          <Text style={styles.streakNumber}>{streak}</Text>
+          <Text style={styles.streakSub}>consecutive days</Text>
+        </View>
+
+        {/* 2-col rate cards */}
+        <View style={styles.rateRow}>
+          <View style={styles.rateCard} testID="checkin-rate">
+            <Text style={styles.rateValue}>{completionRate}%</Text>
+            <Text style={styles.rateLabel}>CHECK-IN RATE</Text>
           </View>
-          <View style={styles.statCol}>
-            <View style={styles.statCard} testID="checkin-rate">
-              <Text style={styles.medStat}>{completionRate}%</Text>
-              <Text style={styles.statLabel}>CHECK-IN RATE</Text>
-            </View>
-            <View style={styles.statCard} testID="focus-completion-rate">
-              <Text style={styles.medStat}>{focusCompletionRate}%</Text>
-              <Text style={styles.statLabel}>FOCUS COMPLETION</Text>
-            </View>
+          <View style={styles.rateCard} testID="focus-completion-rate">
+            <Text style={styles.rateValue}>{focusCompletionRate}%</Text>
+            <Text style={styles.rateLabel}>FOCUS COMPLETION</Text>
           </View>
         </View>
 
-        {/* Momentum Chart */}
+        {/* Momentum chart */}
         {lineData.length > 1 && (
           <View style={styles.card} testID="momentum-chart">
-            <Text style={styles.sectionLabel}>MOMENTUM OVER TIME</Text>
+            <Text style={styles.cardTitle}>Momentum</Text>
+            <Text style={styles.cardSub}>LAST 30 WORKED DAYS</Text>
             <LineChart
               data={lineData}
               color={COLORS.primary}
@@ -107,54 +119,69 @@ export default function ProgressScreen() {
               noOfSections={5}
               maxValue={5}
               height={140}
-              width={WIDTH - SPACING.lg * 2}
+              width={CHART_W}
               rulesColor={COLORS.borderSubtle}
               yAxisTextStyle={{ color: COLORS.textTertiary, fontFamily: FONTS.body, fontSize: 10 }}
             />
           </View>
         )}
 
-        {/* Calendar Heatmap */}
+        {/* Activity heatmap — properly day-aligned */}
         <View style={styles.card} testID="calendar-heatmap">
-          <Text style={styles.sectionLabel}>CHECK-IN CALENDAR</Text>
-          <View style={styles.heatmapGrid}>
+          <Text style={styles.cardTitle}>Activity</Text>
+          <Text style={styles.cardSub}>LAST 7 WEEKS</Text>
+          {/* Day-of-week column headers */}
+          <View style={styles.heatRow}>
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-              <Text key={i} style={styles.heatmapDayLabel}>{d}</Text>
+              <View key={i} style={{ width: CELL_SIZE, alignItems: 'center' }}>
+                <Text style={styles.heatDayLabel}>{d}</Text>
+              </View>
             ))}
-            {heatmapDays.map((item, i) => {
-              let bg = COLORS.surfaceElevated;
-              if (item.ci) {
-                if (item.ci.did_work) {
-                  const opacity = 0.3 + (item.ci.momentum || 3) * 0.14;
-                  bg = `rgba(186, 117, 23, ${opacity.toFixed(2)})`;
+          </View>
+          {/* Cells */}
+          <View style={styles.heatGrid}>
+            {heatmapCells.map((cell, i) => {
+              if (cell.empty) {
+                return <View key={`e${i}`} style={[styles.heatCell, { backgroundColor: 'transparent' }]} />;
+              }
+              let bg = COLORS.surfaceHighest;
+              if (cell.ci) {
+                if (cell.ci.did_work) {
+                  // 5-level gold intensity based on momentum
+                  const level = cell.ci.momentum || 3;
+                  const alpha = [0.2, 0.35, 0.55, 0.75, 1.0][level - 1];
+                  bg = `rgba(255,191,0,${alpha})`;
                 } else {
-                  bg = 'rgba(211,47,47,0.25)';
+                  bg = 'rgba(255,184,174,0.4)';
                 }
               }
               return <View key={i} style={[styles.heatCell, { backgroundColor: bg }]} />;
             })}
           </View>
-          <View style={styles.heatmapLegend}>
-            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.surfaceElevated }]} /><Text style={styles.legendText}>None</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(186,117,23,0.5)' }]} /><Text style={styles.legendText}>Worked</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(211,47,47,0.3)' }]} /><Text style={styles.legendText}>Skipped</Text></View>
+          {/* Legend */}
+          <View style={styles.heatLegend}>
+            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.surfaceHighest }]} /><Text style={styles.legendText}>None</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(255,191,0,0.5)' }]} /><Text style={styles.legendText}>Worked</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(255,184,174,0.5)' }]} /><Text style={styles.legendText}>Skipped</Text></View>
           </View>
         </View>
 
-        {/* Summary */}
+        {/* Totals */}
         <View style={styles.card}>
-          <Text style={styles.sectionLabel}>TOTALS</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Check-ins</Text>
-            <Text style={styles.summaryValue}>{totalCheckins}</Text>
+          <Text style={styles.cardTitle}>Totals</Text>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Check-ins</Text>
+            <Text style={styles.totalValue}>{totalCheckins}</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Days Worked</Text>
-            <Text style={styles.summaryValue}>{workedDays}</Text>
+          <View style={styles.totalDivider} />
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Days Worked</Text>
+            <Text style={styles.totalValue}>{workedDays}</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Focuses Completed</Text>
-            <Text style={styles.summaryValue}>{completedFocuses}</Text>
+          <View style={styles.totalDivider} />
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Focuses Completed</Text>
+            <Text style={styles.totalValue}>{completedFocuses}</Text>
           </View>
         </View>
       </ScrollView>
@@ -165,25 +192,46 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: 40 },
-  screenTitle: { fontFamily: FONTS.heading, fontSize: 28, color: COLORS.textPrimary, marginBottom: SPACING.sm },
-  statsGrid: { flexDirection: 'row', gap: SPACING.sm },
-  statCol: { flex: 1, gap: SPACING.sm },
-  statCard: { ...CARD_STYLE, flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.md },
-  statCardLarge: { flex: 1.2 },
-  bigStat: { fontFamily: FONTS.heading, fontSize: 56, color: COLORS.primary, lineHeight: 64 },
-  medStat: { fontFamily: FONTS.heading, fontSize: 28, color: COLORS.textPrimary },
-  statLabel: { fontFamily: FONTS.label, fontSize: 10, color: COLORS.textTertiary, letterSpacing: 1, textAlign: 'center' },
-  card: { ...CARD_STYLE, gap: SPACING.sm },
-  sectionLabel: { fontFamily: FONTS.label, fontSize: 11, color: COLORS.textSecondary, letterSpacing: 1.2 },
-  heatmapGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  heatmapDayLabel: { width: 36, fontFamily: FONTS.label, fontSize: 10, color: COLORS.textTertiary, textAlign: 'center' },
-  heatCell: { width: 34, height: 34, borderRadius: 4 },
-  heatmapLegend: { flexDirection: 'row', gap: SPACING.md },
+  content: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: 48 },
+  screenTitle: { fontFamily: FONTS.heading, fontSize: 36, color: COLORS.textPrimary, letterSpacing: -0.5 },
+
+  // Streak hero — outside any card, full-bleed visual impact
+  streakHero: { alignItems: 'center', paddingVertical: SPACING.lg, gap: 4 },
+  streakLabel: { fontFamily: FONTS.label, fontSize: 11, color: COLORS.textTertiary, letterSpacing: 2.5, textTransform: 'uppercase' },
+  streakNumber: { fontFamily: FONTS.heading, fontSize: 96, color: COLORS.primary, lineHeight: 104, letterSpacing: -2 },
+  streakSub: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.primaryDim, fontStyle: 'italic' },
+
+  // Rate cards — 2-col
+  rateRow: { flexDirection: 'row', gap: SPACING.md },
+  rateCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+    gap: 4,
+  },
+  rateValue: { fontFamily: FONTS.heading, fontSize: 36, color: COLORS.textPrimary },
+  rateLabel: { fontFamily: FONTS.label, fontSize: 10, color: COLORS.textTertiary, letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center' },
+
+  // Generic card
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, gap: SPACING.md },
+  cardTitle: { fontFamily: FONTS.heading, fontSize: 22, color: COLORS.textPrimary },
+  cardSub: { fontFamily: FONTS.label, fontSize: 10, color: COLORS.textTertiary, letterSpacing: 2, textTransform: 'uppercase', marginTop: -SPACING.sm },
+
+  // Heatmap
+  heatRow: { flexDirection: 'row', gap: 4 },
+  heatDayLabel: { fontFamily: FONTS.label, fontSize: 10, color: COLORS.textTertiary, textAlign: 'center' },
+  heatGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  heatCell: { width: CELL_SIZE, height: CELL_SIZE, borderRadius: 3 },
+  heatLegend: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.xs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 2 },
   legendText: { fontFamily: FONTS.body, fontSize: 12, color: COLORS.textTertiary },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  summaryLabel: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary },
-  summaryValue: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textPrimary },
+
+  // Totals
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalLabel: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary },
+  totalValue: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textPrimary },
+  totalDivider: { height: 1, backgroundColor: COLORS.borderSubtle },
 });

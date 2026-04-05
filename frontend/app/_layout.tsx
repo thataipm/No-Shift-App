@@ -31,6 +31,7 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const router = useRouter();
   const segments = useSegments();
 
@@ -64,22 +65,27 @@ export default function RootLayout() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
+        setCheckingOnboarding(true);
         const onboarded = await checkOnboarding(session.user.id);
         setHasOnboarded(onboarded);
         initNotifications();
       }
       setInitialized(true);
+      setCheckingOnboarding(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         if (session) {
+          setCheckingOnboarding(true);
           const onboarded = await checkOnboarding(session.user.id);
           setHasOnboarded(onboarded);
+          setCheckingOnboarding(false);
           initNotifications();
         } else {
           setHasOnboarded(false);
+          setCheckingOnboarding(false);
         }
       }
     );
@@ -87,7 +93,7 @@ export default function RootLayout() {
   }, [checkOnboarding, initNotifications]);
 
   useEffect(() => {
-    if (!initialized || !fontsLoaded) return;
+    if (!initialized || !fontsLoaded || checkingOnboarding) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
     const inTabs = segments[0] === '(tabs)';
@@ -101,7 +107,7 @@ export default function RootLayout() {
     } else if (session && hasOnboarded && inAuth) {
       router.replace('/(tabs)');
     }
-  }, [initialized, fontsLoaded, session, hasOnboarded, segments]);
+  }, [initialized, fontsLoaded, checkingOnboarding, session, hasOnboarded, segments]);
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded && initialized) {
@@ -125,6 +131,7 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="focus-complete" options={{ presentation: 'modal' }} />
         <Stack.Screen name="admin" />
+        <Stack.Screen name="auth-callback" />
       </Stack>
     </View>
   );

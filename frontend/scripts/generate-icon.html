@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Noshift Icon Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      padding: 48px 24px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 22px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; }
+    .subtitle { font-size: 14px; color: rgba(255,255,255,0.4); }
+    .preview-row {
+      display: flex;
+      gap: 24px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .preview-item span {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.5px;
+    }
+    canvas { display: block; }
+    #main-canvas { border-radius: 22%; box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06); }
+    .preview-small { border-radius: 22%; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #BA7517;
+      color: #000;
+      border: none;
+      padding: 14px 22px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    .instructions {
+      background: rgba(186,117,23,0.08);
+      border: 1px solid rgba(186,117,23,0.2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      max-width: 560px;
+      width: 100%;
+    }
+    .instructions h3 { font-size: 13px; color: #BA7517; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .instructions ol { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+    .instructions li { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+    .instructions code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: rgba(255,255,255,0.8); }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>Noshift — App Icon Generator</h1>
+    <p class="subtitle" style="text-align:center;margin-top:6px">Open in Chrome · fonts auto-load · click download buttons below</p>
+  </div>
+
+  <!-- Main 1024 preview -->
+  <canvas id="main-canvas" width="256" height="256"></canvas>
+
+  <!-- Size previews -->
+  <div class="preview-row">
+    <div class="preview-item">
+      <canvas id="prev-180" class="preview-small" width="60" height="60"></canvas>
+      <span>iOS 60pt</span>
+    </div>
+    <div class="preview-item">
+      <canvas id="prev-60" class="preview-small" width="40" height="40"></canvas>
+      <span>Notif</span>
+    </div>
+    <div class="preview-item">
+      <canvas id="prev-32" class="preview-small" width="24" height="24"></canvas>
+      <span>Favicon</span>
+    </div>
+    <div class="preview-item">
+      <canvas id="prev-android" class="preview-small" width="64" height="64" style="border-radius:50%"></canvas>
+      <span>Android</span>
+    </div>
+  </div>
+
+  <!-- Download buttons -->
+  <div class="btn-row">
+    <button onclick="download('icon.png', 1024)">⬇ icon.png (1024×1024)</button>
+    <button onclick="download('adaptive-icon.png', 1024)">⬇ adaptive-icon.png (1024×1024)</button>
+    <button onclick="download('splash-icon.png', 512)">⬇ splash-icon.png (512×512)</button>
+    <button onclick="download('favicon.png', 64)">⬇ favicon.png (64×64)</button>
+  </div>
+
+  <!-- Instructions -->
+  <div class="instructions">
+    <h3>After Downloading</h3>
+    <ol>
+      <li>Move all 4 downloaded files into <code>frontend/assets/images/</code>, replacing the existing ones.</li>
+      <li>Run <code>npx expo start --clear</code> to apply the new icon.</li>
+      <li>For the App Store / Play Store, the 1024×1024 <code>icon.png</code> is used directly.</li>
+      <li>In Supabase → Auth → URL Configuration, add <code>noshift://auth-callback</code> to Redirect URLs (for Bug 3 fix).</li>
+    </ol>
+  </div>
+
+  <script>
+    // ─── ICON DRAWING FUNCTION ───────────────────────────────────────────────
+    // Draws onto any canvas at any resolution.
+    function drawIcon(ctx, S) {
+      ctx.clearRect(0, 0, S, S);
+
+      // ── 1. Background fill
+      ctx.fillStyle = '#0F0F0F';
+      ctx.fillRect(0, 0, S, S);
+
+      // ── 2. Radial ambient glow behind the letter
+      const glow = ctx.createRadialGradient(S * 0.5, S * 0.48, 0, S * 0.5, S * 0.48, S * 0.52);
+      glow.addColorStop(0,   'rgba(186, 117, 23, 0.18)');
+      glow.addColorStop(0.6, 'rgba(186, 117, 23, 0.05)');
+      glow.addColorStop(1,   'rgba(186, 117, 23, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, S, S);
+
+      // ── 3. Outer ring — very subtle, adds depth
+      ctx.save();
+      ctx.strokeStyle = 'rgba(186, 117, 23, 0.14)';
+      ctx.lineWidth = S * 0.012;
+      ctx.beginPath();
+      ctx.arc(S * 0.5, S * 0.5, S * 0.44, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // ── 4. "N" lettermark — Playfair Display Bold
+      const fontSize = Math.round(S * 0.66);
+      ctx.font = `700 ${fontSize}px 'Playfair Display', Georgia, 'Times New Roman', serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'alphabetic';
+
+      // Measure for vertical centering (optical centre, not mathematical)
+      const metrics = ctx.measureText('N');
+      const textH    = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+      const baselineY = S * 0.5 + textH * 0.38;   // optical center sits ~38% below middle
+
+      // Drop shadow / depth
+      ctx.shadowColor   = 'rgba(186, 117, 23, 0.30)';
+      ctx.shadowBlur    = S * 0.06;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = S * 0.02;
+
+      ctx.fillStyle = '#BA7517';
+      ctx.fillText('N', S * 0.5, baselineY);
+
+      // Reset shadow
+      ctx.shadowColor   = 'transparent';
+      ctx.shadowBlur    = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // ── 5. Gold accent bar below the letter
+      const barW  = S * 0.22;
+      const barY  = baselineY + S * 0.055;
+      const barH  = S * 0.022;
+      const barR  = barH / 2;          // pill radius
+
+      ctx.fillStyle = '#BA7517';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(S * 0.5 - barW / 2 + barR, barY);
+      ctx.lineTo(S * 0.5 + barW / 2 - barR, barY);
+      ctx.arcTo(S * 0.5 + barW / 2, barY,         S * 0.5 + barW / 2, barY + barH, barR);
+      ctx.lineTo(S * 0.5 + barW / 2 - barR,        barY + barH);
+      ctx.arcTo(S * 0.5 + barW / 2, barY + barH,  S * 0.5 - barW / 2, barY + barH, barR);
+      ctx.lineTo(S * 0.5 - barW / 2 + barR,        barY + barH);
+      ctx.arcTo(S * 0.5 - barW / 2, barY + barH,  S * 0.5 - barW / 2, barY,        barR);
+      ctx.lineTo(S * 0.5 - barW / 2,               barY + barR);
+      ctx.arcTo(S * 0.5 - barW / 2, barY,          S * 0.5 - barW / 2 + barR, barY, barR);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // ─── RENDER ALL PREVIEWS ─────────────────────────────────────────────────
+    function renderAll() {
+      const main = document.getElementById('main-canvas');
+      drawIcon(main.getContext('2d'), 256);
+
+      [
+        ['prev-180', 60],
+        ['prev-60',  40],
+        ['prev-32',  24],
+        ['prev-android', 64],
+      ].forEach(([id, size]) => {
+        const c = document.getElementById(id);
+        drawIcon(c.getContext('2d'), size);
+      });
+    }
+
+    // ─── DOWNLOAD HELPER ─────────────────────────────────────────────────────
+    function download(filename, size) {
+      const c = document.createElement('canvas');
+      c.width  = size;
+      c.height = size;
+      drawIcon(c.getContext('2d'), size);
+      const a = document.createElement('a');
+      a.download = filename;
+      a.href = c.toDataURL('image/png');
+      a.click();
+    }
+
+    // Wait for Playfair Display to load, then render
+    document.fonts.ready.then(renderAll);
+    // Fallback: re-render after 1.5s in case fonts loaded slowly
+    setTimeout(renderAll, 1500);
+  </script>
+</body>
+</html>

@@ -114,6 +114,33 @@ export async function disablePushNotifications(): Promise<void> {
   await savePushToken(null);
 }
 
+// Schedule a daily local notification at a specific hour and minute
+export async function scheduleLocalReminder(hour: number, minute: number): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await setupAndroidChannel();
+  // Cancel any existing scheduled notifications first
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  // Schedule a daily repeating notification
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Time to check in 🎯',
+      body: "How did today go? Log your progress on your focus.",
+      sound: 'default',
+    },
+    trigger: {
+      hour,
+      minute,
+      repeats: true,
+    } as any,
+  });
+}
+
+// Cancel all scheduled local notifications
+export async function cancelLocalReminder(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await Notifications.cancelAllScheduledNotificationsAsync();
+}
+
 // Setup notification tap listener (navigate to home/checkin on tap)
 export function setupNotificationListeners(onTap?: () => void) {
   if (Platform.OS === 'web') return () => {};

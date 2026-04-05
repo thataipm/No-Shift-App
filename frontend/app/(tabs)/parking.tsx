@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   Modal, TextInput, Alert, ActivityIndicator, RefreshControl,
-  KeyboardAvoidingView, Platform, Animated,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase, ParkedIdea, Focus, getDaysInto, getDaysRemaining } from '../../lib/supabase';
@@ -112,17 +112,28 @@ export default function ParkingScreen() {
     await fetchData();
   };
 
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   const renderIdea = ({ item }: { item: ParkedIdea }) => (
     <View style={styles.ideaCard} testID={`parked-idea-${item.id}`}>
-      <View style={{ flex: 1 }}>
+      <View style={styles.ideaCardBody}>
         <Text style={styles.ideaTitle}>{item.title}</Text>
-        <Text style={styles.ideaDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+        <Text style={styles.ideaDate}>Saved {formatDate(item.created_at)}</Text>
       </View>
       <View style={styles.ideaActions}>
-        <TouchableOpacity testID={`promote-idea-${item.id}`} style={styles.promoteBtn} onPress={() => handlePromotePress(item)}>
+        <TouchableOpacity
+          testID={`promote-idea-${item.id}`}
+          style={styles.promoteBtn}
+          onPress={() => handlePromotePress(item)}
+        >
           <Text style={styles.promoteBtnText}>→ Focus</Text>
         </TouchableOpacity>
-        <TouchableOpacity testID={`delete-idea-${item.id}`} style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+        <TouchableOpacity
+          testID={`delete-idea-${item.id}`}
+          style={styles.deleteBtn}
+          onPress={() => handleDelete(item)}
+        >
           <Text style={styles.deleteBtnText}>✕</Text>
         </TouchableOpacity>
       </View>
@@ -131,8 +142,16 @@ export default function ParkingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Header with count */}
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Parked Ideas</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.screenTitle}>Parking Lot</Text>
+          {!loading && ideas.length > 0 && (
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>{ideas.length}</Text>
+            </View>
+          )}
+        </View>
         <TouchableOpacity testID="add-idea-button" style={styles.addBtn} onPress={() => setShowAdd(true)}>
           <Text style={styles.addBtnText}>+ Add</Text>
         </TouchableOpacity>
@@ -149,6 +168,7 @@ export default function ParkingScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.empty} testID="parking-empty-state">
+              <Text style={styles.emptyIcon}>◎</Text>
               <Text style={styles.emptyTitle}>No parked ideas</Text>
               <Text style={styles.emptyBody}>When a new idea tempts you, park it here instead of abandoning your focus.</Text>
             </View>
@@ -163,6 +183,7 @@ export default function ParkingScreen() {
             <View style={styles.modalCard} testID="add-idea-modal">
               <View style={styles.handle} />
               <Text style={styles.modalTitle}>Park a new idea</Text>
+              <Text style={styles.modalSub}>Stay focused — capture it and come back later.</Text>
               <TextInput
                 testID="add-idea-input"
                 style={styles.input}
@@ -195,6 +216,7 @@ export default function ParkingScreen() {
                   <Text style={styles.frictionWarn}>You're still committed.</Text>
                   <Text style={styles.modalSub}>Promoting <Text style={{ color: COLORS.primary }}>"{promoteTarget?.title}"</Text> will abandon your current focus.</Text>
                   <View style={styles.frictionBlock}>
+                    <Text style={styles.frictionBlockLabel}>ACTIVE</Text>
                     <Text style={styles.frictionFocus}>{activeFocus?.title}</Text>
                     <Text style={styles.frictionFocusSub}>
                       {activeFocus ? `${getDaysInto(activeFocus.created_at)} days in · ${getDaysRemaining(activeFocus.deadline)} days left` : ''}
@@ -203,8 +225,8 @@ export default function ParkingScreen() {
                   <TouchableOpacity testID="friction-confirm-promote" style={styles.dangerBtn} onPress={() => setFrictionStep('reflection')}>
                     <Text style={styles.dangerBtnText}>Abandon & Promote</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity testID="friction-cancel-promote" style={styles.outlineBtn} onPress={() => setShowPromoteFriction(false)}>
-                    <Text style={styles.outlineBtnText}>Keep My Focus</Text>
+                  <TouchableOpacity testID="friction-cancel-promote" style={styles.ghostBtn} onPress={() => setShowPromoteFriction(false)}>
+                    <Text style={styles.ghostBtnText}>Keep My Focus</Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -236,41 +258,96 @@ export default function ParkingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg },
-  screenTitle: { fontFamily: FONTS.heading, fontSize: 28, color: COLORS.textPrimary },
-  addBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryMuted, borderWidth: 1, borderColor: COLORS.borderActive },
-  addBtnText: { fontFamily: FONTS.label, fontSize: 13, color: COLORS.primary },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  screenTitle: { fontFamily: FONTS.heading, fontSize: 36, color: COLORS.textPrimary, letterSpacing: -0.5 },
+  countBadge: { backgroundColor: COLORS.primaryMuted, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  countBadgeText: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.primary },
+  addBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: RADIUS.pill },
+  addBtnText: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.onPrimary },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { paddingHorizontal: SPACING.lg, paddingBottom: 40, gap: SPACING.sm },
-  ideaCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.borderSubtle, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  ideaTitle: { fontFamily: FONTS.bodyMedium, fontSize: 16, color: COLORS.textPrimary },
-  ideaDate: { fontFamily: FONTS.body, fontSize: 12, color: COLORS.textTertiary, marginTop: 3 },
-  ideaActions: { flexDirection: 'row', gap: SPACING.sm },
-  promoteBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.sm, backgroundColor: COLORS.primaryMuted, borderWidth: 1, borderColor: COLORS.borderActive },
-  promoteBtnText: { fontFamily: FONTS.label, fontSize: 12, color: COLORS.primary },
-  deleteBtn: { width: 36, height: 36, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.borderSubtle, alignItems: 'center', justifyContent: 'center' },
-  deleteBtnText: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textTertiary },
+  list: { paddingHorizontal: SPACING.lg, paddingBottom: 48, gap: SPACING.sm },
+
+  // Idea card — clean with divider-free spacing
+  ideaCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  ideaCardBody: { flex: 1, gap: 4 },
+  ideaTitle: { fontFamily: FONTS.heading, fontSize: 18, color: COLORS.textPrimary, lineHeight: 24 },
+  ideaDate: { fontFamily: FONTS.body, fontSize: 12, color: COLORS.textTertiary },
+  ideaActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  promoteBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.primaryMuted,
+    borderWidth: 1,
+    borderColor: COLORS.borderActive,
+  },
+  promoteBtnText: { fontFamily: FONTS.bold, fontSize: 12, color: COLORS.primary },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceHighest,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.textTertiary },
+
+  // Empty state
   empty: { paddingTop: 80, alignItems: 'center', gap: SPACING.md, paddingHorizontal: SPACING.xl },
-  emptyTitle: { fontFamily: FONTS.heading, fontSize: 22, color: COLORS.textPrimary, textAlign: 'center' },
-  emptyBody: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+  emptyIcon: { fontSize: 40, color: COLORS.textTertiary },
+  emptyTitle: { fontFamily: FONTS.heading, fontSize: 24, color: COLORS.textPrimary, textAlign: 'center' },
+  emptyBody: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 23 },
+
+  // Modals
   modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
-  frictionOverlay: { flex: 1, backgroundColor: 'rgba(15,15,15,0.95)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.lg, borderTopRightRadius: RADIUS.lg, padding: SPACING.lg, paddingBottom: 40, gap: SPACING.md },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.borderSubtle, alignSelf: 'center', marginBottom: SPACING.sm },
-  modalTitle: { fontFamily: FONTS.heading, fontSize: 22, color: COLORS.textPrimary },
+  frictionOverlay: { flex: 1, backgroundColor: 'rgba(10,10,10,0.97)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: SPACING.lg,
+    paddingBottom: 48,
+    gap: SPACING.lg,
+  },
+  handle: { width: 40, height: 3, borderRadius: 2, backgroundColor: COLORS.borderSubtle, alignSelf: 'center', marginBottom: SPACING.xs },
+  modalTitle: { fontFamily: FONTS.heading, fontSize: 26, color: COLORS.textPrimary },
   modalSub: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary, lineHeight: 22 },
-  input: { backgroundColor: COLORS.surfaceElevated, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.textPrimary, fontFamily: FONTS.body, fontSize: 16, borderWidth: 1, borderColor: COLORS.borderSubtle, minHeight: 56 },
-  primaryBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 16, alignItems: 'center' },
-  primaryBtnText: { fontFamily: FONTS.bold, fontSize: 16, color: '#000' },
-  dangerBtn: { backgroundColor: COLORS.danger, borderRadius: RADIUS.pill, paddingVertical: 16, alignItems: 'center' },
-  dangerBtnText: { fontFamily: FONTS.bold, fontSize: 16, color: '#fff' },
-  outlineBtn: { borderWidth: 1, borderColor: COLORS.borderSubtle, borderRadius: RADIUS.pill, paddingVertical: 14, alignItems: 'center' },
-  outlineBtnText: { fontFamily: FONTS.label, fontSize: 14, color: COLORS.textSecondary },
+  input: {
+    backgroundColor: COLORS.surfaceHighest,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 16,
+    minHeight: 56,
+  },
+  primaryBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 18, alignItems: 'center' },
+  primaryBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.onPrimary, letterSpacing: 1 },
+  dangerBtn: { backgroundColor: COLORS.tertiaryContainer, borderRadius: RADIUS.pill, paddingVertical: 18, alignItems: 'center' },
+  dangerBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.onTertiary, letterSpacing: 1 },
+  ghostBtn: { borderWidth: 1, borderColor: COLORS.outlineVariant, borderRadius: RADIUS.pill, paddingVertical: 16, alignItems: 'center' },
+  ghostBtnText: { fontFamily: FONTS.label, fontSize: 14, color: COLORS.textSecondary },
   cancelBtn: { alignItems: 'center', paddingVertical: SPACING.sm },
   cancelBtnText: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.textTertiary },
   btnDisabled: { opacity: 0.5 },
-  frictionWarn: { fontFamily: FONTS.heading, fontSize: 28, color: COLORS.primary },
-  frictionBlock: { backgroundColor: COLORS.surfaceElevated, borderRadius: RADIUS.md, padding: SPACING.md, borderLeftWidth: 3, borderLeftColor: COLORS.primary, gap: 4 },
+  frictionWarn: { fontFamily: FONTS.heading, fontSize: 28, color: COLORS.primary, fontStyle: 'italic' },
+  frictionBlock: {
+    backgroundColor: COLORS.surfaceHighest,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+    gap: 4,
+  },
+  frictionBlockLabel: { fontFamily: FONTS.label, fontSize: 10, color: COLORS.primary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 },
   frictionFocus: { fontFamily: FONTS.headingMedium, fontSize: 17, color: COLORS.textPrimary },
   frictionFocusSub: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.textSecondary },
 });

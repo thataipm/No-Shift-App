@@ -1,39 +1,43 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../../constants/theme';
-
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    home: focused ? '◉' : '○',
-    parking: focused ? '▣' : '□',
-    progress: focused ? '▲' : '△',
-    history: focused ? '■' : '◻',
-    settings: focused ? '⚙' : '⚙',
-  };
-  return (
-    <View style={{ alignItems: 'center' }}>
-      {/* Using text as tab icons to avoid extra icon library */}
-    </View>
-  );
-}
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopWidth: 1,
+          borderTopColor: COLORS.borderSubtle,
+          paddingTop: 10,
+          paddingBottom: 24,
+          height: 76,
+        },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textTertiary,
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarLabelStyle: {
+          fontFamily: FONTS.label,
+          fontSize: 11,
+          letterSpacing: 0.5,
+          marginTop: 2,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ focused }) => (
-            <View testID="tab-home-icon" style={[styles.iconDot, focused && styles.iconDotActive]} />
+          tabBarIcon: ({ focused, color }) => (
+            <View testID="tab-home-icon">
+              <Ionicons
+                name={focused ? 'home' : 'home-outline'}
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
@@ -41,8 +45,14 @@ export default function TabsLayout() {
         name="parking"
         options={{
           title: 'Ideas',
-          tabBarIcon: ({ focused }) => (
-            <View testID="tab-parking-icon" style={[styles.iconDot, focused && styles.iconDotActive]} />
+          tabBarIcon: ({ focused, color }) => (
+            <View testID="tab-parking-icon">
+              <Ionicons
+                name={focused ? 'bulb' : 'bulb-outline'}
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
@@ -50,8 +60,14 @@ export default function TabsLayout() {
         name="progress"
         options={{
           title: 'Progress',
-          tabBarIcon: ({ focused }) => (
-            <View testID="tab-progress-icon" style={[styles.iconDot, focused && styles.iconDotActive]} />
+          tabBarIcon: ({ focused, color }) => (
+            <View testID="tab-progress-icon">
+              <Ionicons
+                name={focused ? 'bar-chart' : 'bar-chart-outline'}
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
@@ -59,8 +75,14 @@ export default function TabsLayout() {
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ focused }) => (
-            <View testID="tab-history-icon" style={[styles.iconDot, focused && styles.iconDotActive]} />
+          tabBarIcon: ({ focused, color }) => (
+            <View testID="tab-history-icon">
+              <Ionicons
+                name={focused ? 'time' : 'time-outline'}
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
@@ -68,40 +90,17 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => (
-            <View testID="tab-settings-icon" style={[styles.iconDot, focused && styles.iconDotActive]} />
+          tabBarIcon: ({ focused, color }) => (
+            <View testID="tab-settings-icon">
+              <Ionicons
+                name={focused ? 'settings-sharp' : 'settings-outline'}
+                size={22}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderSubtle,
-    paddingTop: 10,
-    paddingBottom: 24,
-    height: 76,
-  },
-  tabLabel: {
-    fontFamily: FONTS.label,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    marginTop: 4,
-  },
-  iconDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.textTertiary,
-    marginBottom: 2,
-  },
-  iconDotActive: {
-    backgroundColor: COLORS.primary,
-    width: 20,
-    borderRadius: 3,
-  },
-});

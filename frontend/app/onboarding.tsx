@@ -141,6 +141,9 @@ export default function OnboardingScreen() {
                 <TouchableOpacity testID="onboarding-next-step3" style={styles.primaryBtn} onPress={nextStep}>
                   <Text style={styles.primaryBtnText}>Continue →</Text>
                 </TouchableOpacity>
+                <TouchableOpacity testID="onboarding-skip-step3" style={styles.skipBtn} onPress={nextStep}>
+                  <Text style={styles.skipBtnText}>Skip →</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -163,6 +166,9 @@ export default function OnboardingScreen() {
                 />
                 <TouchableOpacity testID="onboarding-next-step4" style={styles.primaryBtn} onPress={nextStep}>
                   <Text style={styles.primaryBtnText}>Continue →</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="onboarding-skip-step4" style={styles.skipBtn} onPress={nextStep}>
+                  <Text style={styles.skipBtnText}>Skip →</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -315,4 +321,6 @@ const styles = StyleSheet.create({
   summaryValue: { fontFamily: FONTS.body, fontSize: 15, color: COLORS.textSecondary },
   backBtn: { padding: SPACING.lg },
   backBtnText: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.textSecondary },
+  skipBtn: { alignItems: 'center', paddingVertical: SPACING.sm },
+  skipBtnText: { fontFamily: FONTS.body, fontSize: 14, color: COLORS.textTertiary },
 });
