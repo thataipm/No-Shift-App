@@ -45,12 +45,18 @@ export default function RootLayout() {
   });
 
   const checkOnboarding = useCallback(async (userId: string) => {
-    const { data } = await supabase
+    // Race the DB call against a 5-second timeout so a slow/unavailable network
+    // on app resume never leaves the app permanently stuck on the loading screen.
+    const timeout = new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), 5000)
+    );
+    const query = supabase
       .from('focuses')
       .select('id')
       .eq('user_id', userId)
-      .limit(1);
-    return !!(data && data.length > 0);
+      .limit(1)
+      .then(({ data }) => !!(data && data.length > 0));
+    return Promise.race([query, timeout]);
   }, []);
 
   // Initialize push notifications when session exists
@@ -62,29 +68,45 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    // getSession: initial check on mount.
+    // try/finally ensures setInitialized(true) + setCheckingOnboarding(false) are
+    // ALWAYS called even if checkOnboarding() throws (e.g. network unavailable on
+    // app resume), preventing a permanent stuck-on-loading-screen state.
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        setCheckingOnboarding(true);
-        const onboarded = await checkOnboarding(session.user.id);
-        setHasOnboarded(onboarded);
-        initNotifications();
-      }
-      setInitialized(true);
-      setCheckingOnboarding(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      try {
         setSession(session);
         if (session) {
           setCheckingOnboarding(true);
           const onboarded = await checkOnboarding(session.user.id);
           setHasOnboarded(onboarded);
-          setCheckingOnboarding(false);
           initNotifications();
-        } else {
-          setHasOnboarded(false);
+        }
+      } catch (e) {
+        console.warn('[noshift] getSession init error:', e);
+      } finally {
+        setInitialized(true);
+        setCheckingOnboarding(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        // Same guard: if checkOnboarding() throws (e.g. on token-refresh event
+        // fired after app resumes with a slow network), setCheckingOnboarding(false)
+        // must still be called — otherwise the routing effect is permanently blocked.
+        try {
+          setSession(session);
+          if (session) {
+            setCheckingOnboarding(true);
+            const onboarded = await checkOnboarding(session.user.id);
+            setHasOnboarded(onboarded);
+            initNotifications();
+          } else {
+            setHasOnboarded(false);
+          }
+        } catch (e) {
+          console.warn('[noshift] onAuthStateChange error:', e);
+        } finally {
           setCheckingOnboarding(false);
         }
       }
