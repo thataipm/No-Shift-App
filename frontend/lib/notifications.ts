@@ -120,18 +120,19 @@ export async function scheduleLocalReminder(hour: number, minute: number): Promi
   await setupAndroidChannel();
   // Cancel any existing scheduled notifications first
   await Notifications.cancelAllScheduledNotificationsAsync();
-  // Schedule a daily repeating notification
+  // Schedule a daily repeating notification using the typed DAILY trigger
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Time to check in 🎯',
       body: "How did today go? Log your progress on your focus.",
       sound: 'default',
+      channelId: 'checkin_reminders',
     },
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
       minute,
-      repeats: true,
-    } as any,
+    },
   });
 }
 

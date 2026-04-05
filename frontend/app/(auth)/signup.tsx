@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 
@@ -33,11 +32,12 @@ export default function SignupScreen() {
     }
     setLoading(true);
     setError('');
-    const redirectTo = Linking.createURL('auth-callback');
+    // Always use the production deep-link scheme so the confirmation email
+    // redirects back into the app rather than localhost or an Expo Go URL.
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo: 'noshift://auth-callback' },
     });
     setLoading(false);
     if (error) { setError(error.message); return; }

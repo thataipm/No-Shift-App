@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl,
-  TouchableOpacity, Dimensions,
+  TouchableOpacity, Dimensions, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PieChart, LineChart } from 'react-native-gifted-charts';
@@ -36,6 +36,8 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [wipeEmail, setWipeEmail] = useState('');
+  const [wiping, setWiping] = useState(false);
 
   const fetchStats = useCallback(async () => {
     setError('');
@@ -53,6 +55,56 @@ export default function AdminScreen() {
   }, [fetchStats]);
 
   const onRefresh = async () => { setRefreshing(true); await fetchStats(); setRefreshing(false); };
+
+  const handleWipeUser = async () => {
+    const email = wipeEmail.trim().toLowerCase();
+    if (!email) return;
+    Alert.alert(
+      'Wipe All Data?',
+      `This permanently deletes all check-ins, focuses, and parked ideas for:\n\n${email}\n\nThe account itself is kept. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Wipe Data',
+          style: 'destructive',
+          onPress: async () => {
+            setWiping(true);
+            try {
+              // Look up the user's id from the profiles table
+              const { data: profile, error: profileErr } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', email)
+                .single();
+              if (profileErr || !profile) {
+                Alert.alert('Not Found', `No account found for ${email}`);
+                setWiping(false);
+                return;
+              }
+              const uid = profile.id;
+              // Delete in dependency order: checkins → focuses → parked_ideas
+              const [r1, r2, r3] = await Promise.all([
+                supabase.from('checkins').delete().eq('user_id', uid),
+                supabase.from('focuses').delete().eq('user_id', uid),
+                supabase.from('parked_ideas').delete().eq('user_id', uid),
+              ]);
+              const errs = [r1.error, r2.error, r3.error].filter(Boolean);
+              if (errs.length > 0) {
+                Alert.alert('Partial Error', errs.map(e => e?.message).join('\n'));
+              } else {
+                Alert.alert('Done', `All app data wiped for ${email}.`);
+                setWipeEmail('');
+                await fetchStats();
+              }
+            } catch (e: any) {
+              Alert.alert('Error', e?.message || 'Unknown error');
+            }
+            setWiping(false);
+          },
+        },
+      ]
+    );
+  };
 
   const pieData = stats ? [
     { value: stats.completed_focuses, color: COLORS.adminAccent, label: 'Completed' },
@@ -182,6 +234,36 @@ export default function AdminScreen() {
                 />
               </View>
             )}
+
+            {/* Danger Zone — wipe test user data */}
+            <Text style={[styles.sectionTitle, { color: COLORS.danger, marginTop: SPACING.md }]}>Danger Zone</Text>
+            <View style={styles.dangerCard} testID="admin-wipe-section">
+              <Text style={styles.dangerLabel}>Wipe User App Data</Text>
+              <Text style={styles.dangerHint}>
+                Permanently deletes all check-ins, focuses and parked ideas for a given account. The login account itself is preserved.
+              </Text>
+              <TextInput
+                testID="admin-wipe-email-input"
+                style={styles.wipeInput}
+                value={wipeEmail}
+                onChangeText={setWipeEmail}
+                placeholder="user@example.com"
+                placeholderTextColor={COLORS.textTertiary}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                testID="admin-wipe-button"
+                style={[styles.wipeBtn, (!wipeEmail.trim() || wiping) && styles.wipeBtnDisabled]}
+                onPress={handleWipeUser}
+                disabled={!wipeEmail.trim() || wiping}
+              >
+                {wiping
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.wipeBtnText}>Wipe Data</Text>
+                }
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </ScrollView>
@@ -231,4 +313,34 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: FONTS.body, fontSize: 16, color: COLORS.danger, textAlign: 'center' },
   backBtn: { borderWidth: 1, borderColor: COLORS.borderSubtle, borderRadius: RADIUS.pill, paddingVertical: 12, paddingHorizontal: 24 },
   backBtnText: { fontFamily: FONTS.label, fontSize: 14, color: COLORS.textSecondary },
+
+  // Danger zone
+  dangerCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(220,53,69,0.25)',
+    gap: SPACING.md,
+  },
+  dangerLabel: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.danger },
+  dangerHint: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.textTertiary, lineHeight: 20 },
+  wipeInput: {
+    backgroundColor: COLORS.surfaceHighest,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(220,53,69,0.3)',
+  },
+  wipeBtn: {
+    backgroundColor: COLORS.danger,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  wipeBtnDisabled: { opacity: 0.4 },
+  wipeBtnText: { fontFamily: FONTS.bold, fontSize: 14, color: '#fff', letterSpacing: 0.5 },
 });

@@ -45,9 +45,9 @@ export default function ProgressScreen() {
   const totalFocuses = focuses.filter(f => f.status !== 'active').length;
   const focusCompletionRate = totalFocuses > 0 ? Math.round((completedFocuses / totalFocuses) * 100) : 0;
 
-  // Line chart data — last 30 worked days
-  const lineData = checkins.filter(c => c.did_work && c.momentum).slice(-30).map(c => ({
-    value: c.momentum!,
+  // Line chart data — last 30 worked days (default momentum to 3 if not recorded)
+  const lineData = checkins.filter(c => c.did_work).slice(-30).map(c => ({
+    value: c.momentum ?? 3,
     dataPointColor: COLORS.primary,
     label: '',
   }));
@@ -99,7 +99,7 @@ export default function ProgressScreen() {
         </View>
 
         {/* Momentum chart */}
-        {lineData.length > 1 && (
+        {lineData.length > 0 && (
           <View style={styles.card} testID="momentum-chart">
             <Text style={styles.cardTitle}>Momentum</Text>
             <Text style={styles.cardSub}>LAST 30 WORKED DAYS</Text>
@@ -160,9 +160,9 @@ export default function ProgressScreen() {
           </View>
           {/* Legend */}
           <View style={styles.heatLegend}>
-            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.surfaceHighest }]} /><Text style={styles.legendText}>None</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(255,191,0,0.5)' }]} /><Text style={styles.legendText}>Worked</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(255,184,174,0.5)' }]} /><Text style={styles.legendText}>Skipped</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: COLORS.surfaceHighest }]} /><Text style={styles.legendText}>No check-in</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(255,191,0,0.55)' }]} /><Text style={styles.legendText}>Worked</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: 'rgba(255,184,174,0.4)' }]} /><Text style={styles.legendText}>Skipped</Text></View>
           </View>
         </View>
 
