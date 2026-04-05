@@ -109,6 +109,47 @@ export async function enablePushNotifications(): Promise<boolean> {
   return true;
 }
 
+// Enable local daily reminder: requests permission, schedules the notification,
+// then attempts push-token registration as a best-effort side effect.
+// Returns true if notification permission was granted (regardless of push-token outcome).
+// This is what the Settings toggle should call — it never blocks on push-token fetch.
+export async function enableLocalNotifications(hour: number, minute: number): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+
+  // 1. Request permission
+  const { status: existing } = await Notifications.getPermissionsAsync();
+  let finalStatus = existing;
+  if (existing !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    Alert.alert(
+      'Notifications Blocked',
+      'To receive daily reminders, enable notifications in your device settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  }
+
+  // 2. Set up Android channel + schedule local daily reminder
+  await setupAndroidChannel();
+  await scheduleLocalReminder(hour, minute);
+
+  // 3. Best-effort push token (fire-and-forget — never blocks or breaks the toggle)
+  if (Device.isDevice) {
+    registerForPushNotifications()
+      .then(token => { if (token) savePushToken(token); })
+      .catch(e => console.warn('[noshift] push token error:', e));
+  }
+
+  return true;
+}
+
 // Disable push notifications (clear token)
 export async function disablePushNotifications(): Promise<void> {
   await savePushToken(null);

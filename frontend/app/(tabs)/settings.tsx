@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase, Profile } from '../../lib/supabase';
 import {
-  enablePushNotifications,
+  enableLocalNotifications,
   disablePushNotifications,
   scheduleLocalReminder,
   cancelLocalReminder,
@@ -76,16 +76,20 @@ export default function SettingsScreen() {
   const handleNotificationToggle = async (value: boolean) => {
     setTogglingNotif(true);
     if (value) {
-      const success = await enablePushNotifications();
+      // enableLocalNotifications handles permission request + local scheduling.
+      // Push token registration is a fire-and-forget side effect inside it —
+      // so toggle success never depends on reaching Expo's push servers.
+      const success = await enableLocalNotifications(
+        reminderTime.getHours(),
+        reminderTime.getMinutes(),
+      );
       if (success) {
-        // Also schedule local daily reminder
-        await scheduleLocalReminder(reminderTime.getHours(), reminderTime.getMinutes());
         await AsyncStorage.setItem(NOTIF_PREF_KEY, 'true');
       }
       setNotificationsEnabled(success);
     } else {
-      await disablePushNotifications();
       await cancelLocalReminder();
+      await disablePushNotifications();
       await AsyncStorage.setItem(NOTIF_PREF_KEY, 'false');
       setNotificationsEnabled(false);
     }
