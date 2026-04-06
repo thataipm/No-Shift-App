@@ -35,7 +35,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_600SemiBold,
     Manrope_400Regular,
@@ -43,6 +43,9 @@ export default function RootLayout() {
     Manrope_600SemiBold,
     Manrope_700Bold,
   });
+  // Treat a font error the same as loaded — fall back to system fonts rather
+  // than blocking the app on the loading screen permanently.
+  const fontsReady = fontsLoaded || !!fontError;
 
   const checkOnboarding = useCallback(async (userId: string) => {
     // Race the DB call against a 5-second timeout so a slow/unavailable network
@@ -68,26 +71,43 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    // Hard escape hatch: if nothing else resolves initialization within 10 s
+    // (e.g. AsyncStorage hangs, Supabase SDK never fires), force the app past
+    // the loading screen so it is never permanently stuck.
+    const hardTimeout = setTimeout(() => {
+      console.warn('[noshift] initialization timeout — forcing past loading screen');
+      setInitialized(true);
+      setCheckingOnboarding(false);
+    }, 10000);
+
     // getSession: initial check on mount.
-    // try/finally ensures setInitialized(true) + setCheckingOnboarding(false) are
-    // ALWAYS called even if checkOnboarding() throws (e.g. network unavailable on
-    // app resume), preventing a permanent stuck-on-loading-screen state.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      try {
-        setSession(session);
-        if (session) {
-          setCheckingOnboarding(true);
-          const onboarded = await checkOnboarding(session.user.id);
-          setHasOnboarded(onboarded);
-          initNotifications();
+    // .catch() handles the case where getSession() itself rejects (e.g. AsyncStorage
+    // corruption on Android). try/finally inside .then() handles errors thrown
+    // by checkOnboarding(). Both paths guarantee setInitialized(true) is called.
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        try {
+          setSession(session);
+          if (session) {
+            setCheckingOnboarding(true);
+            const onboarded = await checkOnboarding(session.user.id);
+            setHasOnboarded(onboarded);
+            initNotifications();
+          }
+        } catch (e) {
+          console.warn('[noshift] getSession init error:', e);
+        } finally {
+          clearTimeout(hardTimeout);
+          setInitialized(true);
+          setCheckingOnboarding(false);
         }
-      } catch (e) {
-        console.warn('[noshift] getSession init error:', e);
-      } finally {
+      })
+      .catch((e) => {
+        console.warn('[noshift] getSession failed:', e);
+        clearTimeout(hardTimeout);
         setInitialized(true);
         setCheckingOnboarding(false);
-      }
-    });
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -111,11 +131,14 @@ export default function RootLayout() {
         }
       }
     );
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(hardTimeout);
+      subscription.unsubscribe();
+    };
   }, [checkOnboarding, initNotifications]);
 
   useEffect(() => {
-    if (!initialized || !fontsLoaded || checkingOnboarding) return;
+    if (!initialized || !fontsReady || checkingOnboarding) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
     const inTabs = segments[0] === '(tabs)';
@@ -129,15 +152,15 @@ export default function RootLayout() {
     } else if (session && hasOnboarded && inAuth) {
       router.replace('/(tabs)');
     }
-  }, [initialized, fontsLoaded, checkingOnboarding, session, hasOnboarded, segments]);
+  }, [initialized, fontsReady, checkingOnboarding, session, hasOnboarded, segments]);
 
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && initialized) {
+    if (fontsReady && initialized) {
       await SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, initialized]);
+  }, [fontsReady, initialized]);
 
-  if (!fontsLoaded || !initialized) {
+  if (!fontsReady || !initialized) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator color={COLORS.primary} />
