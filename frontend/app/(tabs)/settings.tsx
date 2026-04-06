@@ -240,9 +240,9 @@ export default function SettingsScreen() {
               testID="reminder-time-picker"
               value={pendingTime}
               mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              display="spinner"
               onChange={(_, date) => { if (date) setPendingTime(date); }}
-              style={Platform.OS === 'ios' ? { backgroundColor: COLORS.surface, borderRadius: 12 } : undefined}
+              style={{ backgroundColor: COLORS.surface, borderRadius: 12 }}
             />
             <TouchableOpacity style={styles.primaryBtn} onPress={handleSaveReminderTime} testID="reminder-time-save">
               <Text style={styles.primaryBtnText}>Done</Text>

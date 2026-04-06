@@ -114,10 +114,22 @@ export default function RootLayout() {
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        // Same guard: if checkOnboarding() throws (e.g. on token-refresh event
-        // fired after app resumes with a slow network), setCheckingOnboarding(false)
-        // must still be called — otherwise the routing effect is permanently blocked.
+      async (event, session) => {
+        // INITIAL_SESSION: already handled by getSession() above — skip to
+        // avoid a duplicate checkOnboarding() call racing against it.
+        // TOKEN_REFRESHED: just a credential rotation, onboarding status hasn't
+        // changed — update session state only, no DB call needed.
+        // Both of these firing after getSession's finally has cleared the
+        // hardTimeout was the root cause of the stuck-on-loading-screen bug:
+        // they set checkingOnboarding=true with no safety net to clear it.
+        if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
+          setSession(session);
+          return;
+        }
+
+        // SIGNED_IN: fresh login — check onboarding status
+        // SIGNED_OUT: clear session
+        // USER_UPDATED / PASSWORD_RECOVERY / etc: update session only
         try {
           setSession(session);
           if (session) {
