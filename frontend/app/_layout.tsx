@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -21,7 +21,6 @@ import {
   setupAndroidChannel,
   registerForPushNotifications,
   savePushToken,
-  setupNotificationListeners,
 } from '../lib/notifications';
 import type { Session } from '@supabase/supabase-js';
 
@@ -34,6 +33,7 @@ export default function RootLayout() {
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+  const notificationsInitialized = useRef(false);
 
   const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_700Bold,
@@ -62,8 +62,12 @@ export default function RootLayout() {
     return Promise.race([query, timeout]);
   }, []);
 
-  // Initialize push notifications when session exists
+  // Initialize push notifications once per app session.
+  // Guard with a ref so calling this from both getSession and onAuthStateChange
+  // paths doesn't result in a duplicate token fetch + DB write on cold start.
   const initNotifications = useCallback(async () => {
+    if (notificationsInitialized.current) return;
+    notificationsInitialized.current = true;
     setupNotificationHandlers();
     await setupAndroidChannel();
     const token = await registerForPushNotifications();
