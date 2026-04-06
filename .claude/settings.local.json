@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(npm --version)",
+      "Bash(npx expo:*)",
+      "Bash(npx tsc:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cat -n \"C:/Users/Vinay/Documents/No Shift App - C Code/frontend/app/\\(tabs\\)/index.tsx\")",
+      "Bash(curl -s http://localhost:8081/)",
+      "Bash(curl -s \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app\" -o /dev/null -w \"%{http_code} size:%{size_download}\")",
+      "Bash(curl -s \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app\" -o /dev/null -w \"%{http_code}\")"
+    ]
+  }
+}

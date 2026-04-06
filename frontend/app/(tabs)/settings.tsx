@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
+import { Linking as RNLinking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase, Profile } from '../../lib/supabase';
@@ -197,6 +198,20 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </>
           )}
+        </View>
+
+        {/* Legal */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>LEGAL</Text>
+          <TouchableOpacity
+            testID="privacy-policy-row"
+            style={styles.row}
+            onPress={() => RNLinking.openURL('https://thataipm.github.io/No-Shift-App/privacy-policy.html')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.rowLabel}>Privacy Policy</Text>
+            <Text style={styles.rowHint}>↗</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Sign out */}

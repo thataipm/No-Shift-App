@@ -1,0 +1,27 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Expo Web)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web"],
+      "cwd": "frontend",
+      "port": 8081,
+      "autoPort": false
+    },
+    {
+      "name": "Frontend (Expo Go)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "frontend",
+      "port": 8081
+    },
+    {
+      "name": "Backend (FastAPI)",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["server:app", "--reload", "--port", "8000"],
+      "cwd": "backend",
+      "port": 8000
+    }
+  ]
+}

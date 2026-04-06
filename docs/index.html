@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Noshift — Focus on one thing</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .logo { font-size: 3rem; color: #ba7517; letter-spacing: -1px; margin-bottom: 16px; font-weight: 700; }
+    .tagline { font-size: 1.2rem; color: #888; margin-bottom: 48px; }
+    .badge-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+    .badge {
+      background: #1a1a1a;
+      border: 1px solid #2e2e2e;
+      border-radius: 12px;
+      padding: 14px 24px;
+      color: #ccc;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: border-color 0.2s;
+    }
+    .badge:hover { border-color: #ba7517; color: #ba7517; }
+    .links { display: flex; gap: 24px; color: #555; font-size: 0.85rem; }
+    .links a { color: #555; text-decoration: none; }
+    .links a:hover { color: #ba7517; }
+  </style>
+</head>
+<body>
+  <div class="logo">Noshift</div>
+  <p class="tagline">Commit to one thing. Check in every day. Build momentum.</p>
+  <div class="badge-row">
+    <a class="badge" href="#">📱 App Store</a>
+    <a class="badge" href="#">🤖 Google Play</a>
+  </div>
+  <div class="links">
+    <a href="privacy-policy.html">Privacy Policy</a>
+    <a href="mailto:growwithvny@gmail.com">Contact</a>
+  </div>
+</body>
+</html>
