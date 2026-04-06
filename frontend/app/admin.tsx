@@ -70,27 +70,15 @@ export default function AdminScreen() {
           onPress: async () => {
             setWiping(true);
             try {
-              // Look up the user's id from the profiles table
-              const { data: profile, error: profileErr } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', email)
-                .single();
-              if (profileErr || !profile) {
-                Alert.alert('Not Found', `No account found for ${email}`);
-                setWiping(false);
-                return;
-              }
-              const uid = profile.id;
-              // Delete in dependency order: checkins → focuses → parked_ideas
-              const [r1, r2, r3] = await Promise.all([
-                supabase.from('checkins').delete().eq('user_id', uid),
-                supabase.from('focuses').delete().eq('user_id', uid),
-                supabase.from('parked_ideas').delete().eq('user_id', uid),
-              ]);
-              const errs = [r1.error, r2.error, r3.error].filter(Boolean);
-              if (errs.length > 0) {
-                Alert.alert('Partial Error', errs.map(e => e?.message).join('\n'));
+              // wipe_user_data is a SECURITY DEFINER RPC that bypasses RLS —
+              // direct table deletes would silently do nothing because the admin's
+              // auth.uid() doesn't match the target user's user_id.
+              const { error } = await supabase.rpc('wipe_user_data', { p_email: email });
+              if (error) {
+                const msg = error.message.includes('user_not_found')
+                  ? `No account found for ${email}`
+                  : error.message;
+                Alert.alert('Error', msg);
               } else {
                 Alert.alert('Done', `All app data wiped for ${email}.`);
                 setWipeEmail('');

@@ -156,3 +156,33 @@ $$;
 
 -- ── HOW TO MAKE A USER ADMIN ─────────────────────────────────
 -- Run: UPDATE public.profiles SET is_admin = TRUE WHERE email = 'your@email.com';
+
+-- ── ADMIN: WIPE USER APP DATA (bypasses RLS) ─────────────────
+-- Called by the Admin screen "Wipe User Data" feature.
+-- Direct table deletes from the client are blocked by RLS (admin's uid ≠
+-- target user_id), so this SECURITY DEFINER function is required.
+
+CREATE OR REPLACE FUNCTION public.wipe_user_data(p_email text)
+RETURNS text LANGUAGE PLPGSQL SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  target_id UUID;
+  caller_is_admin BOOLEAN;
+BEGIN
+  SELECT COALESCE((SELECT is_admin FROM public.profiles WHERE id = auth.uid()), FALSE)
+    INTO caller_is_admin;
+  IF NOT caller_is_admin THEN
+    RAISE EXCEPTION 'unauthorized';
+  END IF;
+
+  SELECT id INTO target_id FROM public.profiles WHERE lower(email) = lower(p_email);
+  IF target_id IS NULL THEN
+    RAISE EXCEPTION 'user_not_found';
+  END IF;
+
+  DELETE FROM public.checkins     WHERE user_id = target_id;
+  DELETE FROM public.focuses      WHERE user_id = target_id;
+  DELETE FROM public.parked_ideas WHERE user_id = target_id;
+
+  RETURN 'ok';
+END;
+$$;
