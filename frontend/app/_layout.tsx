@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   PlayfairDisplay_700Bold,
   PlayfairDisplay_600SemiBold,
@@ -26,6 +27,11 @@ import type { Session } from '@supabase/supabase-js';
 
 SplashScreen.preventAutoHideAsync();
 
+// Per-user AsyncStorage key for caching the onboarding flag.
+// Once a user has a focus they have onboarded — this never goes back to false.
+// Caching this means zero network/DB work on every cold start after the first.
+const onboardedKey = (uid: string) => `@noshift_onboarded_${uid}`;
+
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -43,28 +49,36 @@ export default function RootLayout() {
     Manrope_600SemiBold,
     Manrope_700Bold,
   });
-  // Treat a font error the same as loaded — fall back to system fonts rather
-  // than blocking the app on the loading screen permanently.
+  // If fonts fail to load fall back to system fonts — never block on this.
   const fontsReady = fontsLoaded || !!fontError;
 
-  const checkOnboarding = useCallback(async (userId: string) => {
-    // Race the DB call against a 5-second timeout so a slow/unavailable network
-    // on app resume never leaves the app permanently stuck on the loading screen.
-    const timeout = new Promise<boolean>((resolve) =>
-      setTimeout(() => resolve(false), 5000)
-    );
+  // Checks onboarding status. Reads from AsyncStorage cache first so repeat
+  // cold starts need zero network calls. On cache miss queries the DB once
+  // and writes the result back so future starts are instant.
+  const checkOnboarding = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const cached = await AsyncStorage.getItem(onboardedKey(userId));
+      if (cached === 'true') return true;
+    } catch (_) {}
+
+    // Cache miss — query Supabase with a 5 s timeout
+    const timeout = new Promise<boolean>(resolve => setTimeout(() => resolve(false), 5000));
     const query = supabase
       .from('focuses')
       .select('id')
       .eq('user_id', userId)
       .limit(1)
-      .then(({ data }) => !!(data && data.length > 0));
+      .then(({ data }) => {
+        const result = !!(data && data.length > 0);
+        if (result) {
+          // Write to cache so this DB call never happens again
+          AsyncStorage.setItem(onboardedKey(userId), 'true').catch(() => {});
+        }
+        return result;
+      });
     return Promise.race([query, timeout]);
   }, []);
 
-  // Initialize push notifications once per app session.
-  // Guard with a ref so calling this from both getSession and onAuthStateChange
-  // paths doesn't result in a duplicate token fetch + DB write on cold start.
   const initNotifications = useCallback(async () => {
     if (notificationsInitialized.current) return;
     notificationsInitialized.current = true;
@@ -75,61 +89,62 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    // Hard escape hatch: if nothing else resolves initialization within 10 s
-    // (e.g. AsyncStorage hangs, Supabase SDK never fires), force the app past
-    // the loading screen so it is never permanently stuck.
+    // Absolute last-resort escape hatch. Fires at 5 s if initialize() itself
+    // somehow hangs (e.g. Promise.race internals stall on old Android WebView).
     const hardTimeout = setTimeout(() => {
-      console.warn('[noshift] initialization timeout — forcing past loading screen');
+      console.warn('[noshift] hard timeout — forcing past loading screen');
       setInitialized(true);
       setCheckingOnboarding(false);
-    }, 10000);
+    }, 5000);
 
-    // getSession: initial check on mount.
-    // .catch() handles the case where getSession() itself rejects (e.g. AsyncStorage
-    // corruption on Android). try/finally inside .then() handles errors thrown
-    // by checkOnboarding(). Both paths guarantee setInitialized(true) is called.
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        try {
-          setSession(session);
-          if (session) {
-            setCheckingOnboarding(true);
-            const onboarded = await checkOnboarding(session.user.id);
-            setHasOnboarded(onboarded);
-            initNotifications();
-          }
-        } catch (e) {
-          console.warn('[noshift] getSession init error:', e);
-        } finally {
-          clearTimeout(hardTimeout);
-          setInitialized(true);
-          setCheckingOnboarding(false);
+    async function initialize() {
+      try {
+        // Race getSession against a 4 s wall-clock timeout.
+        // When the app is killed and reopened on Android, the Supabase SDK may
+        // need to refresh an expired token via HTTP. If the network isn't ready
+        // yet that call can hang indefinitely. We cap it at 4 s — if it times
+        // out we fall through as "no session" so the user sees the login screen
+        // rather than being stuck forever. They log in once and the new token
+        // is cached; subsequent opens are fast because the token is fresh.
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<{ data: { session: null } }>(resolve =>
+            setTimeout(() => resolve({ data: { session: null } }), 4000)
+          ),
+        ]);
+
+        const sess = result.data.session;
+        setSession(sess);
+
+        if (sess) {
+          // checkOnboarding is now instant on repeat starts thanks to the cache.
+          const onboarded = await checkOnboarding(sess.user.id);
+          setHasOnboarded(onboarded);
+          initNotifications();
         }
-      })
-      .catch((e) => {
-        console.warn('[noshift] getSession failed:', e);
+      } catch (e) {
+        console.warn('[noshift] initialize error:', e);
+      } finally {
         clearTimeout(hardTimeout);
         setInitialized(true);
         setCheckingOnboarding(false);
-      });
+      }
+    }
+
+    initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // INITIAL_SESSION: already handled by getSession() above — skip to
-        // avoid a duplicate checkOnboarding() call racing against it.
-        // TOKEN_REFRESHED: just a credential rotation, onboarding status hasn't
-        // changed — update session state only, no DB call needed.
-        // Both of these firing after getSession's finally has cleared the
-        // hardTimeout was the root cause of the stuck-on-loading-screen bug:
-        // they set checkingOnboarding=true with no safety net to clear it.
+        // INITIAL_SESSION fires on every cold start and is already handled by
+        // initialize() above. TOKEN_REFRESHED is a background credential rotation.
+        // Neither requires re-checking onboarding — just sync the session object.
         if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
           setSession(session);
           return;
         }
 
-        // SIGNED_IN: fresh login — check onboarding status
-        // SIGNED_OUT: clear session
-        // USER_UPDATED / PASSWORD_RECOVERY / etc: update session only
+        // SIGNED_IN: user just logged in — check onboarding (writes cache on success)
+        // SIGNED_OUT: user logged out — clear state
         try {
           setSession(session);
           if (session) {
@@ -147,6 +162,7 @@ export default function RootLayout() {
         }
       }
     );
+
     return () => {
       clearTimeout(hardTimeout);
       subscription.unsubscribe();
