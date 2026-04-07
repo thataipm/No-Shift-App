@@ -177,12 +177,13 @@ export default function RootLayout() {
     const inAdmin = segments[0] === 'admin';
     const inFocusComplete = segments[0] === 'focus-complete';
 
-    if (!session && !inAuth) {
-      router.replace('/(auth)/login');
-    } else if (session && !hasOnboarded && !inOnboarding && !inTabs && !inAdmin && !inFocusComplete) {
-      router.replace('/onboarding');
-    } else if (session && hasOnboarded && inAuth) {
-      router.replace('/(tabs)');
+    if (!session) {
+      if (!inAuth) router.replace('/(auth)/login');
+    } else if (!hasOnboarded) {
+      if (!inOnboarding) router.replace('/onboarding');
+    } else {
+      // Logged in + onboarded — go to tabs unless already there or in an overlay screen
+      if (!inTabs && !inAdmin && !inFocusComplete) router.replace('/(tabs)');
     }
   }, [initialized, fontsReady, checkingOnboarding, session, hasOnboarded, segments]);
 
