@@ -183,7 +183,7 @@ export default function RootLayout() {
       if (!inOnboarding) router.replace('/onboarding');
     } else {
       // Logged in + onboarded — go to tabs unless already there or in an overlay screen
-      if (!inTabs && !inAdmin && !inFocusComplete) router.replace('/(tabs)');
+      if (!inTabs && !inAdmin && !inFocusComplete && !inOnboarding) router.replace('/(tabs)');
     }
   }, [initialized, fontsReady, checkingOnboarding, session, hasOnboarded, segments]);
 
